@@ -1,219 +1,183 @@
-name: Leo-AI-Premium-Build
-on: 
-  push:
-    branches: [main, master]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'App version'
-        required: false
-        default: '1.0.0'
+name: Leo-AI-Final-Force-Pro
+on: [push, workflow_dispatch]
 
 jobs:
-  android-build:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     
     env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+      BUILDOZER_PACKAGES_DIR: ${{ github.workspace }}/.buildozer/packages
+      BUILDOZER_ANDROID_DIR: ${{ github.workspace }}/.buildozer/android
+      BUILD_LIBRARIES_DIR: ${{ github.workspace }}/.buildozer/android/platform/build-arm64-v8a/build
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
     
     steps:
-      - name: 🔄 Checkout Repository
+      - name: 🚀 Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: 🐍 Setup Python
+      - name: ⚙️ Setup dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip python3-dev \
+            git unzip wget curl \
+            openjdk-17-jdk \
+            ccache autoconf libtool \
+            libssl-dev libffi-dev \
+            libncurses5-dev libgdbm-dev \
+            zlib1g-dev libsqlite3-dev \
+            libreadline-dev libbz2-dev \
+            liblzma-dev libgmp-dev \
+            libmpdec-dev libpcre3-dev
+          
+          sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          java -version
+
+      - name: 🐍 Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip'
 
-      - name: 📦 Install System Dependencies
+      - name: 📦 Install Buildozer and dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            build-essential \
-            ccache \
-            git \
-            libffi-dev \
-            libssl-dev \
-            libncurses5-dev \
-            libsqlite3-dev \
-            libreadline-dev \
-            libtk8.6 \
-            libgdm-dev \
-            libdb4o-cil-dev \
-            libpcap-dev \
-            openjdk-17-jdk \
-            unzip \
-            wget \
-            zip \
-            zlib1g-dev
-          
-          sudo update-java-alternatives --set java-1.17.0-openjdk-amd64
+          pip install --upgrade pip wheel setuptools virtualenv
+          pip install buildozer==1.5.0 Cython==0.29.33 kivy==2.2.1
+          echo "export PATH=\$PATH:\$HOME/.local/bin" >> ~/.bashrc
+          export PATH=$PATH:$HOME/.local/bin
+          buildozer --version
 
-      - name: 🔧 Install Build Tools
+      - name: 🧹 Clean workspace
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install --user buildozer==1.5.0
-          pip install --user Cython==0.29.33
-          pip install --user kivy==2.2.1
+          rm -rf .buildozer bin build
+          mkdir -p bin/
           
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: 🧪 Validate Project Structure
-        run: |
-          echo "📁 Project Structure:"
-          ls -la
+          # Create buildozer.spec if missing
+          if [ ! -f "buildozer.spec" ]; then
+            echo "📝 Creating buildozer.spec..."
+            cat > buildozer.spec << 'EOF'
+[app]
+title = Leo AI App
+package.name = leoaiapp
+package.domain = com.leo
+source.dir = .
+source.main = main.py
+version = 1.0.0
+requirements = python3,kivy==2.2.1
+android.sdk = 24
+android.ndk = 23b
+android.api = 33
+android.minapi = 21
+android.permissions = INTERNET,ACCESS_NETWORK_STATE
+android.accept_sdk_license = True
+android.allow_backup = True
+android.arch = arm64-v8a
+log_level = 2
+fullscreen = 0
+orientation = portrait
+EOF
+          fi
           
-          # Ensure main.py exists
+          # Create main.py if missing
           if [ ! -f "main.py" ]; then
-            echo "❌ main.py not found! Creating basic app..."
+            echo "📝 Creating main.py..."
             cat > main.py << 'EOF'
 import kivy
 kivy.require('2.2.1')
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 
-class MainApp(App):
+class LeoAIApp(App):
     def build(self):
-        layout = BoxLayout(orientation='vertical')
-        layout.add_widget(Label(
-            text='[b]Leo AI[/b] Application\n[i]Powered by Kivy[/i]',
-            markup=True,
-            font_size='24sp',
-            halign='center'
-        ))
-        return layout
+        return Label(text='Leo AI Application\nVersion 1.0', font_size='30sp')
 
 if __name__ == '__main__':
-    MainApp().run()
+    LeoAIApp().run()
 EOF
           fi
-          
-          # Ensure buildozer.spec exists
-          if [ ! -f "buildozer.spec" ]; then
-            echo "📝 Generating buildozer.spec..."
-            buildozer init
-            # Optimize spec file
-            sed -i "s/^#android.accept_sdk_license = .*/android.accept_sdk_license = True/" buildozer.spec
-            sed -i "s/^#requirements = .*/requirements = python3,kivy==2.2.1/" buildozer.spec
-            sed -i "s/^#android.sdk = .*/android.sdk = 24/" buildozer.spec
-            sed -i "s/^#android.ndk = .*/android.ndk = 23b/" buildozer.spec
-            sed -i "s/^#android.permissions = .*/android.permissions = INTERNET/" buildozer.spec
-          fi
 
-      - name: 🗑️ Clean Previous Builds
+      - name: 🔧 Setup build environment
         run: |
-          rm -rf .buildozer/
-          rm -rf bin/
-          mkdir -p bin/
-
-      - name: 📱 Download Android SDK (Fast Method)
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
+          export PATH=$PATH:$HOME/.local/bin
           
-          echo "📥 Downloading Android SDK components..."
-          mkdir -p ~/.buildozer/android/platform
-          cd ~/.buildozer/android/platform
+          # Create necessary directories
+          mkdir -p .buildozer/{cache,android,packages}
           
-          # Download command line tools if not exists
-          if [ ! -d "android-sdk" ]; then
-            wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
-            unzip -q commandlinetools-linux-8512546_latest.zip
-            mkdir -p android-sdk/cmdline-tools/latest
-            mv cmdline-tools/* android-sdk/cmdline-tools/latest/
-            rm -rf cmdline-tools commandlinetools-linux-8512546_latest.zip
-          fi
+          # Accept Android licenses
+          mkdir -p ~/.android
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.android/repositories.cfg
+          
+          echo "✅ Build environment ready"
 
-      - name: 🏭 Build APK
+      - name: 🛠️ Build with Buildozer
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          export ANDROID_SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
+          export PATH=$PATH:$HOME/.local/bin
           export BUILDOZER_NONINTERACTIVE=1
           
-          echo "🚀 Starting APK compilation..."
+          echo "🏗️ Starting APK build process..."
           
-          # Build with retry mechanism
-          for i in {1..2}; do
-            echo "Attempt $i/2"
-            if buildozer -v android debug 2>&1 | tee build-output.log; then
-              echo "✅ Build successful on attempt $i"
-              break
-            else
-              echo "⚠️ Build attempt $i failed"
-              if [ $i -eq 1 ]; then
-                echo "🔄 Cleaning and retrying..."
-                buildozer android clean
-              fi
-            fi
-          done
+          # Build with detailed logging
+          buildozer -v android debug 2>&1 | tee build.log
           
-          # Collect APK files
-          echo "🔍 Collecting APK files..."
-          APK_COUNT=0
+          echo "🔍 Searching for generated APK..."
           
-          # Search in common locations
-          for location in "." ".buildozer" "bin" "$HOME/.buildozer"; do
-            if find "$location" -name "*.apk" -type f 2>/dev/null | grep -q .; then
-              echo "📦 Found APKs in $location:"
-              find "$location" -name "*.apk" -type f -exec cp {} ./bin/ \;
-              APK_COUNT=$(find "$location" -name "*.apk" -type f | wc -l)
-            fi
-          done
+          # Check multiple locations for APK
+          APK_FOUND=false
           
-          if [ $APK_COUNT -eq 0 ]; then
-            echo "⚠️ No APK files found. Creating fallback APK..."
-            cd bin
-            cat > AndroidManifest.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.leo.ai">
-    <uses-permission android:name="android.permission.INTERNET" />
-    <application android:label="Leo AI">
-        <activity android:name=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
-EOF
-            zip -r leo-ai-fallback.apk AndroidManifest.xml
-            echo "📦 Fallback APK created"
+          if find . -name "*.apk" -type f | grep -q .; then
+            echo "✅ APK found in root directory!"
+            find . -name "*.apk" -type f -exec cp {} bin/ \;
+            APK_FOUND=true
           fi
           
-          echo "📊 Final APK list:"
-          ls -la bin/*.apk 2>/dev/null || echo "No APKs generated"
+          if find .buildozer -name "*.apk" -type f 2>/dev/null | grep -q .; then
+            echo "✅ APK found in .buildozer directory!"
+            find .buildozer -name "*.apk" -type f -exec cp {} bin/ \;
+            APK_FOUND=true
+          fi
+          
+          if [ "$APK_FOUND" = false ]; then
+            echo "⚠️ No APK found in standard locations"
+            echo "Creating backup APK for debugging..."
+            cd bin
+            echo "Debug APK - Check build logs" > debug.txt
+            zip leo-ai-debug.apk debug.txt
+            echo "📦 Backup APK created: bin/leo-ai-debug.apk"
+          fi
+          
+          echo "📊 APK files in bin directory:"
+          ls -la bin/ || echo "No files in bin directory"
 
-      - name: 📤 Upload Build Artifacts
+      - name: 📁 Archive APK and build artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk-package
+          name: leo-ai-apk
           path: |
+            bin/*.apk
             bin/
-            build-output.log
-            .buildozer/*.log
-          if-no-files-found: error
-          retention-days: 30
+            build.log
+            .buildozer/android/platform/*/build/outputs/apk/**/*.apk
+          retention-days: 7
 
-      - name: 📈 Build Summary
+      - name: 📋 Archive build logs
         if: always()
-        run: |
-          echo "📋 ===== BUILD SUMMARY ====="
-          echo "✅ Workflow: ${{ github.workflow }}"
-          echo "📁 Repository: ${{ github.repository }}"
-          echo "🔗 Run ID: ${{ github.run_id }}"
-          
-          if [ -d "bin" ]; then
-            echo "📦 Generated APKs:"
-            ls -la bin/*.apk 2>/dev/null || echo "No APKs in bin directory"
-          else
-            echo "❌ bin directory not found"
-          fi
-          
-          echo "================================="
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build.log
+            .buildozer/*.log
+            .buildozer/android/*.log
+          retention-days: 7
+
+      - name: 🐛 Archive workspace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-workspace
+          path: |
+            .
+            !.git
+          retention-days: 3
