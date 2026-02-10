@@ -5,15 +5,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Install Android SDK Tools
+      - name: Setup Android SDK
         run: |
           sudo apt-get update
           sudo apt-get install -y libncurses5
-          mkdir -p ~/.android && touch ~/.android/repositories.cfg
-          yes | sdkmanager --licenses
-          sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          # यह कमांड टूल्स को सीधा फिक्स कर देगा
+          echo "y" | sudo $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
