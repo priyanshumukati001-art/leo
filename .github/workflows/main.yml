@@ -23,11 +23,15 @@ jobs:
       - name: Build APK with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          yes | buildozer android debug || true
+          # बिल्ड को साफ़ करके फिर से शुरू करना
+          buildozer init
+          yes | buildozer android debug
+        
+      - name: List Files (Debug)
+        run: ls -R  # यह चेक करने के लिए कि फाइल कहाँ बनी है
 
       - name: Upload APK Artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: LEO-Final-APK
-          path: bin/*.apk
+          path: ./**/*.apk
