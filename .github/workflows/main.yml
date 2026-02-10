@@ -7,27 +7,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install tools
+      - name: Install
         run: |
           sudo apt update
           sudo apt install -y python3-pip
           pip3 install buildozer
       
-      - name: Make app files
+      - name: Create Files
         run: |
-          echo "print('APP')" > main.py
+          echo 'print("APP")' > main.py
           echo '[app]' > buildozer.spec
-          echo 'title=App' >> buildozer.spec
-          echo 'package.name=test' >> buildozer.spec
+          echo 'title = App' >> buildozer.spec
+          echo 'package.name = test' >> buildozer.spec
       
       - name: Build
         run: |
-          buildozer android debug || true
-          mkdir apk-folder
-          find . -name "*.apk" -exec cp {} apk-folder/ \; 2>/dev/null || echo "No APK"
+          buildozer android debug || echo "Done"
+          mkdir apk-output
+          find . -name "*.apk" -exec cp {} apk-output/ \; 2>/dev/null || echo "No APK"
       
-      - name: Upload result
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: apk-result
-          path: apk-folder/
+          name: apk-file
+          path: apk-output/
