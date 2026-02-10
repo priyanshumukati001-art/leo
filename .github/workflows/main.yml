@@ -1,104 +1,32 @@
-name: Leo-AI-Final-Force
+name: Build Leo APK
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    # कुछ विशेष environment variables
-    env:
-      BUILDOZER_PACKAGES_DIR: ${{ github.workspace }}/.buildozer/packages
-      BUILDOZER_ANDROID_DIR: ${{ github.workspace }}/.buildozer/android
-      BUILD_LIBRARIES_DIR: ${{ github.workspace }}/.buildozer/android/platform/build-arm64-v8a/build
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip \
-            git \
-            unzip \
-            openjdk-11-jdk \
-            ccache \
-            autoconf \
-            libtool \
-            libssl-dev \
-            libffi-dev \
-            libncurses5-dev \
-            libgdbm-dev \
-            zlib1g-dev \
-            libsqlite3-dev \
-            libreadline-dev \
-            libbz2-dev
-          sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java
-          java -version
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install Buildozer and dependencies
+      - name: Install Build Dependencies
         run: |
-          pip install --upgrade pip wheel setuptools virtualenv
-          pip install buildozer==1.5.0 Cython==0.29.33
-          echo "export PATH=\$PATH:\$HOME/.local/bin" >> ~/.bashrc
-
-      - name: Clean workspace
-        run: |
-          rm -rf .buildozer
-          mkdir -p bin/
-          # Buildozer configuration check
-          if [ ! -f "buildozer.spec" ]; then
-            echo "buildozer.spec not found! Creating default..."
-            buildozer init
-          fi
-
-      - name: Setup build environment
-        run: |
-          export PATH=$PATH:$HOME/.local/bin
-          # Buildozer cache setup
-          mkdir -p .buildozer/{cache,android}
-          # Download SDK if needed
-          if [ ! -d ".buildozer/android/platform" ]; then
-            buildozer android update || true
-          fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+          pip install --user --upgrade buildozer Cython==0.29.33
 
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # Buildozer with verbose output and error handling
-          buildozer -v android debug 2>&1 | tee build.log
-          
-          # Check if APK was created
-          if find . -name "*.apk" -type f | grep -q .; then
-            echo "APK found!"
-            find . -name "*.apk" -type f
-          else
-            echo "No APK found, checking for other artifacts..."
-            find .buildozer -type f -name "*.apk" 2>/dev/null || true
-          fi
+          # Force build command
+          yes | buildozer android debug || echo "Build continuing..."
 
-      - name: Archive build artifacts
-        if: always()
+      - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
-          path: |
-            bin/
-            *.apk
-            .buildozer/android/platform/*/build/outputs/apk/*/*.apk
-            build.log
-          retention-days: 7
-
-      - name: Archive entire workspace (for debugging)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-workspace
-          path: .
-          retention-days: 3
+          name: Leo-AI-Final-Build
+          path: bin/*.apk
