@@ -2,10 +2,11 @@ name: Build LEO APK
 on: push
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # हमने वर्जन फिक्स कर दिया
     steps:
       - uses: actions/checkout@v4
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         with:
           workdir: .
+          
