@@ -6,13 +6,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Android SDK टूल्स को ठीक करना
-      - name: Install Android SDK Tools
+    - name: Install Android SDK Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y libncurses5
-          echo "y" | sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "platform-tools"
-
+          # यह लाइन बिना रुके सब कुछ अपडेट कर देगी
+          yes | sdkmanager --licenses
+          sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         with:
