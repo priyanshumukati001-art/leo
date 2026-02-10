@@ -1,33 +1,31 @@
 name: Build Leo APK
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # GitHub को फाइल लिखने की परमिशन देना
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Buildozer
-        # स्पेलिंग एकदम सही: ArtemSerebrennikov
-        uses: ArtemSerebrennikov/buildozer-action@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          buildozer_version: master
-          command: buildozer android debug
-          repository_display_name: Leo AI
-          package_name: leoai
-          package_domain: org.leo
+          python-version: '3.10'
+
+      - name: Install Buildozer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip build-essential git python3 python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0-gstreamer-lite-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+          pip install --user --upgrade buildozer Cython==0.29.33
+
+      - name: Build with Buildozer
+        run: |
+          export PATH=$PATH:$HOME/.local/bin
+          # यहाँ 'yes' कमांड खुद ही सारे एग्रीमेंट 'Yes' कर देगी
+          yes | buildozer android debug
 
       - name: Upload APK
-        # v4 वर्शन जो अब काम करेगा
         uses: actions/upload-artifact@v4
         with:
           name: Leo-AI-Package
