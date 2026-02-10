@@ -1,39 +1,54 @@
-name: Make Android APK
-on: 
-  workflow_dispatch:
+name: Android APK Builder
+on: [workflow_dispatch]
 
 jobs:
-  make-apk:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: Start Build
-      run: echo "Starting APK build..."
-      
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install requirements
-      run: |
-        sudo apt update
-        sudo apt install -y python3-pip
-        pip3 install buildozer
+      - name: Checkout
+        uses: actions/checkout@v4
         
-    - name: Create app files
-      run: |
-        echo 'print("Hello from Leo AI App")' > main.py
-        echo '[app]' > buildozer.spec
-        echo 'title = Leo AI' >> buildozer.spec
-        echo 'package.name = leoai' >> buildozer.spec
-        echo 'android.accept_sdk_license = True' >> buildozer.spec
-        
-    - name: Build APK
-      run: |
-        buildozer android debug || echo "Build completed"
-        mkdir -p apks
-        find . -name "*.apk" -exec cp {} apks/ \; 2>/dev/null || echo "Searching for APK"
-        
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: apk-files
-        path: apks/
+      - name: Setup
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip python3-venv
+          pip3 install buildozer
+          
+      - name: Create Files
+        run: |
+          echo "from kivy.app import App
+from kivy.uix.label import Label
+
+class MyApp(App):
+    def build(self):
+        return Label(text='Hello World')
+
+if __name__ == '__main__':
+    MyApp().run()" > main.py
+          
+          echo "[app]
+title = MyApp
+package.name = myapp
+package.domain = com.example
+source.dir = .
+source.main = main.py
+version = 1.0
+requirements = python3,kivy
+android.sdk = 24
+android.ndk = 23b
+android.api = 30
+android.minapi = 21
+android.permissions = INTERNET
+android.accept_sdk_license = True" > buildozer.spec
+          
+      - name: Build
+        run: |
+          buildozer android debug 2>&1 | tail -20
+          mkdir -p output
+          find . -name "*.apk" -exec cp {} output/ \; 2>/dev/null || true
+          
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: output/
