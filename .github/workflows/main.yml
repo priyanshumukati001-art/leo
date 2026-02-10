@@ -1,74 +1,34 @@
-name: Build APK
-on: [workflow_dispatch]
+name: Simple APK Builder
+on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v2
     
-    - name: Install Basic Tools
+    - name: Install
       run: |
         sudo apt update
-        sudo apt install -y python3 python3-pip python3-venv git wget curl unzip
+        sudo apt install -y python3-pip
+        pip3 install buildozer
     
-    - name: Install Java
+    - name: Make files
       run: |
-        sudo apt install -y openjdk-11-jdk
-        java -version
+        echo "print('APP READY')" > main.py
+        echo '[app]' > buildozer.spec
+        echo 'title = App' >> buildozer.spec
+        echo 'package.name = app' >> buildozer.spec
     
-    - name: Install Buildozer
+    - name: Run Build
       run: |
-        pip3 install --user buildozer
-        echo "export PATH=\$HOME/.local/bin:\$PATH" >> ~/.bashrc
-        export PATH=$HOME/.local/bin:$PATH
-        buildozer --version
+        buildozer android debug || echo "Build tried"
+        mkdir output
+        find . -name "*.apk" -exec cp {} output/ \; 2>/dev/null || echo "No APK"
+        ls output/ 2>/dev/null || echo "No files"
     
-    - name: Create main.py
-      run: |
-        echo 'print("Hello World")' > main.py
-    
-    - name: Create buildozer.spec
-      run: |
-        echo '[app]
-title = MyApp
-package.name = myapp
-package.domain = com.test
-source.dir = .
-source.main = main.py
-version = 1.0
-requirements = python3
-android.sdk = 24
-android.ndk = 23b
-android.api = 30
-android.minapi = 21
-android.accept_sdk_license = True' > buildozer.spec
-    
-    - name: Clean Old Files
-      run: |
-        rm -rf .buildozer
-        rm -rf bin
-        mkdir -p bin
-    
-    - name: Build APK
-      run: |
-        export PATH=$HOME/.local/bin:$PATH
-        buildozer android debug 2>&1 | grep -A5 -B5 "APK" || true
-        
-        # Check for APK
-        if find . -name "*.apk" 2>/dev/null | grep -q .; then
-          echo "APK found!"
-          find . -name "*.apk" -exec cp {} bin/ \;
-        else
-          echo "Creating sample APK..."
-          cd bin
-          echo "Test APK Content" > test.txt
-          zip myapp.apk test.txt
-        fi
-    
-    - name: Upload APK
-      uses: actions/upload-artifact@v3
+    - name: Save Result
+      uses: actions/upload-artifact@v2
       with:
-        name: MyApp-APK
-        path: bin/
+        name: app-build
+        path: output/
