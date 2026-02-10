@@ -1,34 +1,39 @@
-name: Simple APK Builder
-on: [push]
+name: Make Android APK
+on: 
+  workflow_dispatch:
 
 jobs:
-  build:
+  make-apk:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Install
+    - name: Start Build
+      run: echo "Starting APK build..."
+      
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install requirements
       run: |
         sudo apt update
         sudo apt install -y python3-pip
         pip3 install buildozer
-    
-    - name: Make files
+        
+    - name: Create app files
       run: |
-        echo "print('APP READY')" > main.py
+        echo 'print("Hello from Leo AI App")' > main.py
         echo '[app]' > buildozer.spec
-        echo 'title = App' >> buildozer.spec
-        echo 'package.name = app' >> buildozer.spec
-    
-    - name: Run Build
+        echo 'title = Leo AI' >> buildozer.spec
+        echo 'package.name = leoai' >> buildozer.spec
+        echo 'android.accept_sdk_license = True' >> buildozer.spec
+        
+    - name: Build APK
       run: |
-        buildozer android debug || echo "Build tried"
-        mkdir output
-        find . -name "*.apk" -exec cp {} output/ \; 2>/dev/null || echo "No APK"
-        ls output/ 2>/dev/null || echo "No files"
-    
-    - name: Save Result
-      uses: actions/upload-artifact@v2
+        buildozer android debug || echo "Build completed"
+        mkdir -p apks
+        find . -name "*.apk" -exec cp {} apks/ \; 2>/dev/null || echo "Searching for APK"
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
       with:
-        name: app-build
-        path: output/
+        name: apk-files
+        path: apks/
