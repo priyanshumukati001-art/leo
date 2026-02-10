@@ -3,8 +3,7 @@ on: push
 
 jobs:
   build:
-    # हमने यहाँ वर्जन बदल दिया है ताकि सर्वर तुरंत मिल जाए
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,16 +16,17 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav libsqlite3-dev sqlite3 bzip2 libbz2-dev libssl-dev openssl libffi-dev liblzma-dev
+          sudo apt-get install -y build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav libsqlite3-dev sqlite3 bzip2 libbz2-dev libssl-dev openssl libffi-dev liblzma-dev
           pip3 install --user --upgrade Cython==0.29.33 buildozer
+          # यह लाइन सुनिश्चित करेगी कि AI लाइब्रेरी सही से डले
+          pip3 install google-generativeai 
 
       - name: Build APK with Buildozer
         run: |
           export PATH=$PATH:$HOME/.local/bin
-          # Licenses automatic accept करने के लिए
-          yes | buildozer android debug
-        continue-on-error: false
-
+          # यह कमांड बिना किसी एरर के लाइसेंस एक्सेप्ट करेगी
+          yes | buildozer android debug || buildozer android debug
+        
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
