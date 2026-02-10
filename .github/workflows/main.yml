@@ -3,21 +3,31 @@ on: push
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Android SDK
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libncurses5
-          # यह कमांड टूल्स को सीधा फिक्स कर देगा
-          echo "y" | sudo $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          sudo apt-get install -y python3-pip build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav libsqlite3-dev sqlite3 bzip2 libbz2-dev libssl-dev openssl libffi-dev liblzma-dev
+          pip3 install --user --upgrade Cython==0.29.33 buildozer
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
+      - name: Build APK with Buildozer
+        run: |
+          export PATH=$PATH:$HOME/.local/bin
+          # Licenses accept karne ke liye
+          yes | buildozer android debug
+        continue-on-error: false
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          workdir: .
-          buildozer_version: stable
+          name: LEO-Final-APK
+          path: bin/*.apk
