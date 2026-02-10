@@ -1,33 +1,20 @@
-name: Build APK
-on: workflow_dispatch
+name: Make APK
+on: [workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip
-          pip3 install buildozer
-      
-      - name: Create Files
-        run: |
-          echo 'print("APP")' > main.py
-          echo '[app]' > buildozer.spec
-          echo 'title = App' >> buildozer.spec
-          echo 'package.name = test' >> buildozer.spec
-      
-      - name: Build
-        run: |
-          buildozer android debug || echo "Done"
-          mkdir apk-output
-          find . -name "*.apk" -exec cp {} apk-output/ \; 2>/dev/null || echo "No APK"
-      
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      - run: sudo apt update && sudo apt install -y python3-pip
+      - run: pip3 install buildozer
+      - run: echo 'print("HI")' > main.py
+      - run: echo '[app]' > buildozer.spec
+      - run: echo 'title=Test' >> buildozer.spec
+      - run: buildozer android debug || true
+      - run: mkdir out
+      - run: find . -name "*.apk" -exec cp {} out/ \; 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
         with:
-          name: apk-file
-          path: apk-output/
+          name: apk
+          path: out/
