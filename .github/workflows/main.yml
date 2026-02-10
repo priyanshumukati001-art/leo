@@ -1,54 +1,33 @@
-name: Android APK Builder
-on: [workflow_dispatch]
+name: Build APK
+on: workflow_dispatch
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        
-      - name: Setup
+      - uses: actions/checkout@v4
+      
+      - name: Install tools
         run: |
           sudo apt update
-          sudo apt install -y python3-pip python3-venv
+          sudo apt install -y python3-pip
           pip3 install buildozer
-          
-      - name: Create Files
+      
+      - name: Make app files
         run: |
-          echo "from kivy.app import App
-from kivy.uix.label import Label
-
-class MyApp(App):
-    def build(self):
-        return Label(text='Hello World')
-
-if __name__ == '__main__':
-    MyApp().run()" > main.py
-          
-          echo "[app]
-title = MyApp
-package.name = myapp
-package.domain = com.example
-source.dir = .
-source.main = main.py
-version = 1.0
-requirements = python3,kivy
-android.sdk = 24
-android.ndk = 23b
-android.api = 30
-android.minapi = 21
-android.permissions = INTERNET
-android.accept_sdk_license = True" > buildozer.spec
-          
+          echo "print('APP')" > main.py
+          echo '[app]' > buildozer.spec
+          echo 'title=App' >> buildozer.spec
+          echo 'package.name=test' >> buildozer.spec
+      
       - name: Build
         run: |
-          buildozer android debug 2>&1 | tail -20
-          mkdir -p output
-          find . -name "*.apk" -exec cp {} output/ \; 2>/dev/null || true
-          
-      - name: Upload
+          buildozer android debug || true
+          mkdir apk-folder
+          find . -name "*.apk" -exec cp {} apk-folder/ \; 2>/dev/null || echo "No APK"
+      
+      - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: output/
+          name: apk-result
+          path: apk-folder/
