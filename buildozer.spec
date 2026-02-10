@@ -9,4 +9,4 @@ requirements = python3,kivy,google-generativeai,requests,urllib3,certifi,chardet
 orientation = portrait
 permissions = INTERNET, RECORD_AUDIO, FOREGROUND_SERVICE, CAMERA, CALL_PHONE
 services = LeoService:service.py
-android.arch = armeabi-v7a
+android.archs = armeabi-v7a
